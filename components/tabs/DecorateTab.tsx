@@ -47,8 +47,8 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     // 計算照片大小和間距
-    const photoWidth = Math.floor(canvas.width * 0.6) // 照片寬度為畫布寬度的 80%
-    const photoHeight = Math.floor(photoWidth * (9/16)) // 保持 16:9 比例
+    const photoWidth = Math.floor(canvas.width * 0.35) // 照片寬度為畫布寬度的 80%
+    const photoHeight = photoWidth // 保持 16:9 比例
     const gap = Math.floor(canvas.height * 0.03) // 間距為畫布高度的 3%
 
     // 創建第二個畫布用於垂直排列照片
@@ -73,8 +73,13 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
         const img = new Image()
         img.onload = () => {
 
-          const sourceX = (img.width - 300) / 2;
-          const sourceY = (img.height - 300) / 2;
+          // 計算圖片的中心點
+          const centerX = img.width / 2;
+          const centerY = img.height / 2;
+          
+          // 計算要截取區域的左上角座標（以中心點為基準向左上偏移150像素）
+          const sourceX = centerX - photoWidth / 2;
+          const sourceY = centerY - photoHeight / 2;
           
           // 繪製白色背景和陰影
           ctxB.save()

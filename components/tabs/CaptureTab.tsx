@@ -28,9 +28,9 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
       const stream = await navigator.mediaDevices.getUserMedia({ 
         video: { 
           facingMode: "user",
-          width: { ideal: 1280 },
+          width: { ideal: 720 },
           height: { ideal: 720 }
-        } 
+        }
       })
       if (videoRef.current) {
         videoRef.current.srcObject = stream
@@ -102,8 +102,7 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
       </h2>
       <div className="relative">
         <div className="bg-pink-100 border-pink-300 border-4 rounded-xl mx-auto flex items-center justify-center overflow-hidden relative
-          md:aspect-[3/4] md:max-w-[480px]
-          aspect-[9/16] max-w-[360px]">
+          aspect-[1/1] max-w-[480px]">
           <video
             ref={videoRef}
             autoPlay
