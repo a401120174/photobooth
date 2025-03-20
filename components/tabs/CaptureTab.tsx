@@ -37,7 +37,7 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
         startCapturing()
       }
     } catch (err) {
-      alert("無法訪問相機功能")
+      console.error("無法訪問攝像頭:", err)
     }
   }, [])
 
