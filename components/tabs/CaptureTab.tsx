@@ -37,7 +37,7 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
         startCapturing()
       }
     } catch (err) {
-      console.error("無法訪問攝像頭:", err)
+      alert("無法訪問相機功能")
     }
   }, [])
 
@@ -56,8 +56,6 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
       }
     }
   }, [])
-
-
 
   // 處理倒數計時和拍攝
   useEffect(() => {

@@ -72,16 +72,32 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
       return new Promise<void>((resolve) => {
         const img = new Image()
         img.onload = () => {
-          // 繪製白色背景和陰影
-          ctxB.save()
-          ctxB.shadowColor = "rgba(0, 0, 0, 0.2)"
-          ctxB.shadowBlur = 10
-          ctxB.shadowOffsetX = 5
-          ctxB.shadowOffsetY = 5
+          // 計算圖片原始比例
+          const imgRatio = img.width / img.height
+          const targetRatio = photoWidth / photoHeight
+          
+          let drawWidth = photoWidth
+          let drawHeight = photoHeight
+          let offsetX = 0
+          let offsetY = 0
+          
+          // 根據比例調整繪製尺寸
+          if (imgRatio > targetRatio) {
+            // 圖片較寬，以高度為基準
+            drawHeight = photoHeight
+            drawWidth = drawHeight * imgRatio
+            offsetX = (photoWidth - drawWidth) / 2
+          } else {
+            // 圖片較高，以寬度為基準
+            drawWidth = photoWidth
+            drawHeight = drawWidth / imgRatio
+            offsetY = (photoHeight - drawHeight) / 2
+          }
+          
+          // 繪製白色背景
           ctxB.fillStyle = "white"
           ctxB.fillRect(0, index * (photoHeight + gap), photoWidth, photoHeight)
-          ctxB.restore()
-
+          
           // 應用濾鏡效果
           const filter = filters.find(f => f.id === selectedFilter)
           if (filter && filter.id !== "normal") {
@@ -89,7 +105,13 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
           }
 
           // 繪製照片
-          ctxB.drawImage(img, 0, index * (photoHeight + gap), photoWidth, photoHeight)
+          ctxB.drawImage(
+            img,
+            offsetX,
+            index * (photoHeight + gap) + offsetY,
+            drawWidth,
+            drawHeight
+          )
           
           // 重置濾鏡
           ctxB.filter = "none"
@@ -134,12 +156,54 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
   const downloadPhoto = useCallback(() => {
     if (!mergedPhoto) return
 
-    const link = document.createElement("a")
-    link.href = mergedPhoto
-    link.download = "kawaii-photo-booth.jpg"
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
+    // 檢查是否為手機瀏覽器
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
+
+    if (isMobile) {
+      // 手機瀏覽器：在新視窗中打開圖片
+      const newWindow = window.open()
+      if (newWindow) {
+        newWindow.document.write(`
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>下載照片</title>
+              <style>
+                body { margin: 0; padding: 20px; background: #f5f5f5; }
+                .container { max-width: 100%; text-align: center; }
+                img { max-width: 100%; height: auto; }
+                .button {
+                  display: inline-block;
+                  padding: 10px 20px;
+                  background: #ec4899;
+                  color: white;
+                  text-decoration: none;
+                  border-radius: 20px;
+                  margin-top: 20px;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="container">
+                <img src="${mergedPhoto}" alt="照片" />
+                <br />
+                <a href="${mergedPhoto}" class="button" target="_blank">
+                  長按圖片儲存
+                </a>
+              </div>
+            </body>
+          </html>
+        `)
+      }
+    } else {
+      // 桌面瀏覽器：使用傳統下載方式
+      const link = document.createElement("a")
+      link.href = mergedPhoto
+      link.download = "kawaii-photo-booth.jpg"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
   }, [mergedPhoto])
 
   return (
