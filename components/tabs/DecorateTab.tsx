@@ -17,9 +17,9 @@ interface Filter {
 
 const filters: Filter[] = [
   { id: "normal", label: "原始", filter: "none" },
-  { id: "warm", label: "暖色", filter: "brightness(1.1) contrast(0.9) saturate(0.9)" },
-  { id: "cool", label: "冷色", filter: "brightness(0.9) contrast(1.1) saturate(1.1)" },
-  { id: "vintage", label: "復古", filter: "saturate(0.8) contrast(1.2) sepia(0.5) blur(1px)" },
+  { id: "warm", label: "暖色", filter: "brightness(1.1) contrast(0.9) saturate(0.9) sepia(0.2)" },
+  { id: "cool", label: "冷色", filter: "brightness(0.9) contrast(1.1) saturate(1.1) sepia(0.1)" },
+  { id: "vintage", label: "復古", filter: "saturate(0.7) contrast(1.2) sepia(0.5) brightness(0.9)" },
 ]
 
 export function DecorateTab({ photos, onBack }: DecorateTabProps) {
@@ -40,9 +40,9 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
 
     // 創建漸層背景
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, "#fdf2f8") // 淺粉色
-    gradient.addColorStop(0.5, "#fbcfe8") // 中粉色
-    gradient.addColorStop(1, "#e9d5ff") // 淺紫色
+    gradient.addColorStop(0, "#1a1a1a") // 深灰色
+    gradient.addColorStop(0.5, "#262626") // 中灰色
+    gradient.addColorStop(1, "#333333") // 淺灰色
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -62,8 +62,8 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
 
     // 創建畫布 B 的背景漸層
     const gradientB = ctxB.createLinearGradient(0, 0, 0, canvasB.height)
-    gradientB.addColorStop(0, "#fce7f3") // 淺粉色
-    gradientB.addColorStop(1, "#f5f3ff") // 淺紫色
+    gradientB.addColorStop(0, "#262626") // 深灰色
+    gradientB.addColorStop(1, "#333333") // 淺灰色
     ctxB.fillStyle = gradientB
     ctxB.fillRect(0, 0, canvasB.width, canvasB.height)
 
@@ -157,13 +157,13 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
   }, [mergedPhoto])
 
   return (
-    <TabsContent value="decorate" className="p-6 bg-white">
+    <TabsContent value="decorate" className="p-6 bg-zinc-900">
       <div className="max-w-4xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-xl font-bold text-purple-600">裝飾照片</h2>
+          <h2 className="text-xl font-bold text-amber-200">裝飾照片</h2>
           <Button
             variant="outline"
-            className="text-purple-600 border-purple-200 hover:bg-purple-50"
+            className="text-amber-200 border-amber-800 hover:bg-amber-900/50"
             onClick={onBack}
           >
             重新拍攝
@@ -172,15 +172,19 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-4">
-            <Card>
+            <Card className="bg-zinc-800 border-zinc-700">
               <CardContent className="p-4">
-                <h3 className="text-lg font-semibold text-purple-600 mb-3">選擇濾鏡</h3>
+                <h3 className="text-lg font-semibold text-amber-200 mb-3">選擇濾鏡</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {filters.map((filter) => (
                     <Button
                       key={filter.id}
                       variant={selectedFilter === filter.id ? "default" : "outline"}
-                      className="w-full"
+                      className={`w-full ${
+                        selectedFilter === filter.id
+                          ? "bg-amber-700 hover:bg-amber-600 text-amber-100"
+                          : "text-amber-200 border-amber-700 hover:bg-amber-800/50"
+                      }`}
                       onClick={() => setSelectedFilter(filter.id)}
                     >
                       {filter.label}
@@ -192,9 +196,9 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
           </div>
 
           <div className="space-y-4">
-            <Card>
+            <Card className="bg-zinc-800 border-zinc-700">
               <CardContent className="p-4">
-                <div className="aspect-[9/16] bg-pink-50 rounded-lg overflow-hidden relative">
+                <div className="aspect-[9/16] bg-zinc-900 rounded-lg overflow-hidden relative border border-zinc-700">
                   {mergedPhoto ? (
                     <img
                       src={mergedPhoto}
@@ -202,7 +206,7 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center text-purple-400">
+                    <div className="absolute inset-0 flex items-center justify-center text-amber-200/60">
                       處理中...
                     </div>
                   )}
@@ -210,7 +214,7 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
                 <canvas ref={setMergeCanvasRef} className="hidden" />
                 <div className="mt-4 flex justify-center">
                   <Button
-                    className="bg-gradient-to-r from-pink-500 to-purple-500 text-white rounded-full px-8"
+                    className="bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 hover:from-amber-600 hover:to-amber-800 rounded-full px-8 shadow-lg shadow-amber-900/20"
                     onClick={downloadPhoto}
                     disabled={!mergedPhoto}
                   >

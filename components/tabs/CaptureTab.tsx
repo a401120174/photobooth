@@ -94,31 +94,31 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
   }, [initCamera, isActive])
 
   return (
-    <TabsContent value="capture" className="p-6 bg-white">
-      <h2 className="text-xl font-bold text-purple-600 mb-4 text-center">
+    <TabsContent value="capture" className="p-6 bg-zinc-900">
+      <h2 className="text-xl font-bold text-amber-200 mb-4 text-center">
         {isCapturing 
           ? `第 ${photos.length + 1} 張照片` 
           : "準備拍攝"}
       </h2>
       <div className="relative">
-        <div className="bg-pink-100 border-pink-300 border-4 rounded-xl mx-auto flex items-center justify-center overflow-hidden relative
+        <div className="bg-zinc-800 border-amber-900/50 border-4 rounded-xl mx-auto flex items-center justify-center overflow-hidden relative
           aspect-[1/1] max-w-[480px]">
           <video
             ref={videoRef}
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 w-full h-full object-cover"
+            className="absolute inset-0 w-full h-full object-cover sepia-[.25] contrast-125 saturate-75"
           />
           {countdown !== 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-8xl font-bold text-white drop-shadow-lg animate-bounce">
+              <span className="text-8xl font-bold text-amber-200 drop-shadow-lg animate-bounce">
                 {countdown}
               </span>
             </div>
           )}
           {showFlash && (
-            <div className="absolute inset-0 bg-white animate-flash"></div>
+            <div className="absolute inset-0 bg-amber-200/80 animate-flash"></div>
           )}
         </div>
         <canvas ref={canvasRef} className="hidden" />
