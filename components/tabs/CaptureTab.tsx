@@ -108,7 +108,7 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
             autoPlay
             playsInline
             muted
-            className="absolute inset-0 w-full h-full object-cover sepia-[.25] contrast-125 saturate-75"
+            className="absolute inset-0 w-full h-full object-cover"
           />
           {countdown !== 0 && (
             <div className="absolute inset-0 flex items-center justify-center">
@@ -118,7 +118,7 @@ export function CaptureTab({ setActiveTab, onPhotosCaptured,isActive }: CaptureT
             </div>
           )}
           {showFlash && (
-            <div className="absolute inset-0 bg-amber-200/80 animate-flash"></div>
+            <div className="absolute inset-0 bg-amber-200 animate-flash"></div>
           )}
         </div>
         <canvas ref={canvasRef} className="hidden" />
