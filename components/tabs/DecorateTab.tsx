@@ -25,100 +25,157 @@ const filters: Filter[] = [
 export function DecorateTab({ photos, onBack }: DecorateTabProps) {
   const [selectedFilter, setSelectedFilter] = useState<string>("normal")
   const [mergedPhoto, setMergedPhoto] = useState<string | null>(null)
-  const [mergeCanvasRef, setMergeCanvasRef] = useState<HTMLCanvasElement | null>(null)
-  // 合併照片
-  const mergePhotos = useCallback(() => {
-    if (!mergeCanvasRef || photos.length === 0) return
+  const mergeCanvasRef = useRef<HTMLCanvasElement>(null)
 
-      const canvas = mergeCanvasRef
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
-
-    // 設置畫布大小為 1080x1920
-    canvas.width = 1080
-    canvas.height = 1920
-
-    // 創建漸層背景
+  // 創建主畫布背景
+  const createMainCanvasBackground = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
     const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
     gradient.addColorStop(0, "#1a1a1a") // 深灰色
     gradient.addColorStop(0.5, "#262626") // 中灰色
     gradient.addColorStop(1, "#333333") // 淺灰色
     ctx.fillStyle = gradient
     ctx.fillRect(0, 0, canvas.width, canvas.height)
+  }, [])
 
-    // 計算照片大小和間距
-    const photoWidth = Math.floor(canvas.width * 0.35) // 照片寬度為畫布寬度的 80%
-    const photoHeight = photoWidth // 保持 16:9 比例
-    const gap = Math.floor(canvas.height * 0.03) // 間距為畫布高度的 3%
-
-    // 創建第二個畫布用於垂直排列照片
-    const canvasB = document.createElement("canvas")
-    const ctxB = canvasB.getContext("2d")
-    if (!ctxB) return
-
-    // 設置畫布 B 的大小
-    canvasB.width = photoWidth
-    canvasB.height = (photoHeight + gap) * photos.length - gap
-
-    // 創建畫布 B 的背景漸層
+  // 創建次要畫布背景
+  const createSecondaryCanvasBackground = useCallback((ctxB: CanvasRenderingContext2D, canvasB: HTMLCanvasElement) => {
     const gradientB = ctxB.createLinearGradient(0, 0, 0, canvasB.height)
     gradientB.addColorStop(0, "#262626") // 深灰色
     gradientB.addColorStop(1, "#333333") // 淺灰色
     ctxB.fillStyle = gradientB
     ctxB.fillRect(0, 0, canvasB.width, canvasB.height)
+  }, [])
+
+  // 繪製單張照片
+  const drawSinglePhoto = useCallback((
+    ctxB: CanvasRenderingContext2D, 
+    img: HTMLImageElement,
+    index: number,
+    photoWidth: number,
+    photoHeight: number,
+    gap: number,
+    selectedFilter: string
+  ) => {
+    // 計算圖片的中心點
+    const centerX = img.width / 2
+    const centerY = img.height / 2
+    
+    // 計算要截取區域的左上角座標
+    const sourceX = centerX - photoWidth / 2
+    const sourceY = centerY - photoHeight / 2
+    
+    // 繪製白色背景和陰影
+    ctxB.save()
+    ctxB.shadowColor = "rgba(0, 0, 0, 0.2)"
+    ctxB.shadowBlur = 10
+    ctxB.shadowOffsetX = 5
+    ctxB.shadowOffsetY = 5
+    ctxB.fillStyle = "white"
+    ctxB.fillRect(0, index * (photoHeight + gap), photoWidth, photoHeight)
+    ctxB.restore()
+
+    // 應用濾鏡效果
+    const filter = filters.find(f => f.id === selectedFilter)
+    if (filter && filter.id !== "normal") {
+      ctxB.filter = filter.filter
+    }
+
+    // 繪製照片
+    ctxB.drawImage(
+      img,
+      sourceX, sourceY,
+      photoWidth, photoHeight,
+      0, index * (photoHeight + gap),
+      photoWidth, photoHeight
+    )
+
+    // 重置濾鏡
+    ctxB.filter = "none"
+
+    // 添加日期標記
+    addDateMark(ctxB, photoWidth, photoHeight, gap, index)
+  }, [])
+
+  // 添加日期標記
+  const addDateMark = useCallback((
+    ctx: CanvasRenderingContext2D,
+    photoWidth: number,
+    photoHeight: number,
+    gap: number,
+    index: number
+  ) => {
+    const date = new Date().toLocaleDateString("zh-TW", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+    ctx.fillStyle = "#9f7aea"
+    ctx.font = "16px Arial"
+    ctx.textAlign = "center"
+    ctx.fillText(date, photoWidth / 2, (index + 1) * (photoHeight + gap) - gap / 2)
+  }, [])
+
+  // 合併所有照片到主畫布
+  const mergeFinalCanvas = useCallback((
+    ctx: CanvasRenderingContext2D,
+    canvas: HTMLCanvasElement,
+    canvasB: HTMLCanvasElement
+  ) => {
+    ctx.save()
+    ctx.translate(canvas.width / 2, canvas.height / 2)
+    ctx.rotate((10 * Math.PI) / 180)
+    ctx.drawImage(canvasB, -canvasB.width / 2, -canvasB.height / 2)
+    ctx.restore()
+  }, [])
+
+  // 初始化畫布尺寸
+  const initializeCanvases = useCallback((
+    canvas: HTMLCanvasElement,
+    canvasB: HTMLCanvasElement,
+    photos: string[]
+  ) => {
+    // 設置主畫布大小
+    canvas.width = 1080
+    canvas.height = 1920
+
+    // 計算照片大小和間距
+    const photoWidth = Math.floor(canvas.width * 0.35)
+    const photoHeight = photoWidth
+    const gap = Math.floor(canvas.height * 0.03)
+
+    // 設置次要畫布大小
+    canvasB.width = photoWidth
+    canvasB.height = (photoHeight + gap) * photos.length - gap
+
+    return { photoWidth, photoHeight, gap }
+  }, [])
+
+  // 合併照片主函數
+  const mergePhotos = useCallback(() => {
+    if (!mergeCanvasRef.current || photos.length === 0) return
+
+    const canvas = mergeCanvasRef.current
+    const ctx = canvas.getContext("2d")
+    if (!ctx) return
+
+    // 創建第二個畫布
+    const canvasB = document.createElement("canvas")
+    const ctxB = canvasB.getContext("2d")
+    if (!ctxB) return
+
+    // 初始化畫布
+    const { photoWidth, photoHeight, gap } = initializeCanvases(canvas, canvasB, photos)
+
+    // 創建背景
+    createMainCanvasBackground(ctx, canvas)
+    createSecondaryCanvasBackground(ctxB, canvasB)
 
     // 使用 Promise.all 等待所有照片加載完成
     const loadPromises = photos.map((photo, index) => {
       return new Promise<void>((resolve) => {
         const img = new Image()
         img.onload = () => {
-
-          // 計算圖片的中心點
-          const centerX = img.width / 2;
-          const centerY = img.height / 2;
-          
-          // 計算要截取區域的左上角座標（以中心點為基準向左上偏移150像素）
-          const sourceX = centerX - photoWidth / 2;
-          const sourceY = centerY - photoHeight / 2;
-          
-          // 繪製白色背景和陰影
-          ctxB.save()
-          ctxB.shadowColor = "rgba(0, 0, 0, 0.2)"
-          ctxB.shadowBlur = 10
-          ctxB.shadowOffsetX = 5
-          ctxB.shadowOffsetY = 5
-          ctxB.fillStyle = "white"
-          ctxB.fillRect(0, index * (photoHeight + gap), photoWidth, photoHeight)
-          ctxB.restore()
-
-          // 應用濾鏡效果
-          const filter = filters.find(f => f.id === selectedFilter)
-          if (filter && filter.id !== "normal") {
-            ctxB.filter = filter.filter
-          }
-
-          ctxB.drawImage(
-            img,
-            sourceX, sourceY,   // 來源圖片的 x, y 起始位置
-            photoWidth, photoHeight,           // 來源圖片的寬度和高度
-            0, index * (photoHeight + gap),      // 畫布上的 x, y 位置
-            photoWidth, photoHeight            // 繪製到畫布上的寬度和高度
-          );
-   
-          // 重置濾鏡
-          ctxB.filter = "none"
-
-          // 添加日期標記
-          const date = new Date().toLocaleDateString("zh-TW", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          })
-          ctxB.fillStyle = "#9f7aea"
-          ctxB.font = "16px Arial"
-          ctxB.textAlign = "center"
-          ctxB.fillText(date, photoWidth / 2, (index + 1) * (photoHeight + gap) - gap / 2)
-
+          drawSinglePhoto(ctxB, img, index, photoWidth, photoHeight, gap, selectedFilter)
           resolve()
         }
         img.src = photo
@@ -127,22 +184,10 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
 
     // 等待所有照片加載完成後進行合併
     Promise.all(loadPromises).then(() => {
-      // 將畫布 B 旋轉 10 度並放置在畫布 A 的中心
-      ctx.save()
-      ctx.translate(canvas.width / 2, canvas.height / 2)
-      ctx.rotate((10 * Math.PI) / 180)
-      ctx.drawImage(canvasB, -canvasB.width / 2, -canvasB.height / 2)
-      ctx.restore()
-
-      // 設置合併後的照片
+      mergeFinalCanvas(ctx, canvas, canvasB)
       setMergedPhoto(canvas.toDataURL("image/jpeg", 0.9))
     })
-  }, [photos, selectedFilter, mergeCanvasRef])
-
-  // 當照片或濾鏡改變時重新合併
-  useEffect(() => {
-    mergePhotos()
-  }, [photos, selectedFilter, mergePhotos])
+  }, [photos, selectedFilter, createMainCanvasBackground, createSecondaryCanvasBackground, drawSinglePhoto, mergeFinalCanvas, initializeCanvases])
 
   // 下載照片
   const downloadPhoto = useCallback(() => {
@@ -155,6 +200,11 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
     link.click()
     document.body.removeChild(link)
   }, [mergedPhoto])
+
+  // 當照片或濾鏡改變時重新合併
+  useEffect(() => {
+    mergePhotos()
+  }, [photos, selectedFilter, mergePhotos])
 
   return (
     <TabsContent value="decorate" className="p-6 bg-zinc-900">
@@ -211,7 +261,7 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
                     </div>
                   )}
                 </div>
-                <canvas ref={setMergeCanvasRef} className="hidden" />
+                <canvas ref={mergeCanvasRef} className="hidden" />
                 <div className="mt-4 flex justify-center">
                   <Button
                     className="bg-gradient-to-r from-amber-700 to-amber-900 text-amber-100 hover:from-amber-600 hover:to-amber-800 rounded-full px-8 shadow-lg shadow-amber-900/20"
