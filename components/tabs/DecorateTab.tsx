@@ -3,6 +3,16 @@ import { Card, CardContent } from "@/components/ui/card"
 import { TabsContent } from "@/components/ui/tabs"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Download } from "lucide-react"
+import {
+  PHOTO_WIDTH,
+  PHOTO_HEIGHT,
+  PHOTO_GAP,
+  createMainCanvasBackground,
+  createSecondaryCanvasBackground,
+  drawSinglePhoto,
+  mergeFinalCanvas,
+  initializeCanvases
+} from "@/utils/canvasUtils"
 
 interface DecorateTabProps {
   photos: string[]
@@ -23,176 +33,46 @@ const filters: Filter[] = [
 ]
 
 export function DecorateTab({ photos, onBack }: DecorateTabProps) {
+  // 狀態管理
   const [selectedFilter, setSelectedFilter] = useState<string>("normal")
   const [mergedPhoto, setMergedPhoto] = useState<string | null>(null)
   const mergeCanvasRef = useRef<HTMLCanvasElement>(null)
 
-  // 創建主畫布背景
-  const createMainCanvasBackground = useCallback((ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height)
-    gradient.addColorStop(0, "#1a1a1a") // 深灰色
-    gradient.addColorStop(0.5, "#262626") // 中灰色
-    gradient.addColorStop(1, "#333333") // 淺灰色
-    ctx.fillStyle = gradient
-    ctx.fillRect(0, 0, canvas.width, canvas.height)
-  }, [])
-
-  // 創建次要畫布背景
-  const createSecondaryCanvasBackground = useCallback((ctxB: CanvasRenderingContext2D, canvasB: HTMLCanvasElement) => {
-    const gradientB = ctxB.createLinearGradient(0, 0, 0, canvasB.height)
-    gradientB.addColorStop(0, "#262626") // 深灰色
-    gradientB.addColorStop(1, "#333333") // 淺灰色
-    ctxB.fillStyle = gradientB
-    ctxB.fillRect(0, 0, canvasB.width, canvasB.height)
-  }, [])
-
-  // 繪製單張照片
-  const drawSinglePhoto = useCallback((
-    ctxB: CanvasRenderingContext2D, 
-    img: HTMLImageElement,
-    index: number,
-    photoWidth: number,
-    photoHeight: number,
-    gap: number,
-    selectedFilter: string
-  ) => {
-    // 計算圖片的中心點
-    const centerX = img.width / 2
-    const centerY = img.height / 2
-    
-    // 計算要截取區域的左上角座標
-    const sourceX = centerX - photoWidth / 2
-    const sourceY = centerY - photoHeight / 2
-    
-    // 繪製白色背景和陰影
-    ctxB.save()
-    ctxB.shadowColor = "rgba(0, 0, 0, 0.2)"
-    ctxB.shadowBlur = 10
-    ctxB.shadowOffsetX = 5
-    ctxB.shadowOffsetY = 5
-    ctxB.fillStyle = "white"
-    ctxB.fillRect(0, index * (photoHeight + gap), photoWidth, photoHeight)
-    ctxB.restore()
-
-    // 應用濾鏡效果
-    const filter = filters.find(f => f.id === selectedFilter)
-    if (filter && filter.id !== "normal") {
-      ctxB.filter = filter.filter
-    }
-
-    // 繪製照片
-    ctxB.drawImage(
-      img,
-      sourceX, sourceY,
-      photoWidth, photoHeight,
-      0, index * (photoHeight + gap),
-      photoWidth, photoHeight
-    )
-
-    // 重置濾鏡
-    ctxB.filter = "none"
-
-    // 添加日期標記
-    addDateMark(ctxB, photoWidth, photoHeight, gap, index)
-  }, [])
-
-  // 添加日期標記
-  const addDateMark = useCallback((
-    ctx: CanvasRenderingContext2D,
-    photoWidth: number,
-    photoHeight: number,
-    gap: number,
-    index: number
-  ) => {
-    const date = new Date().toLocaleDateString("zh-TW", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    })
-    ctx.fillStyle = "#9f7aea"
-    ctx.font = "16px Arial"
-    ctx.textAlign = "center"
-    ctx.fillText(date, photoWidth / 2, (index + 1) * (photoHeight + gap) - gap / 2)
-  }, [])
-
-  // 合併所有照片到主畫布
-  const mergeFinalCanvas = useCallback((
-    ctx: CanvasRenderingContext2D,
-    canvas: HTMLCanvasElement,
-    canvasB: HTMLCanvasElement
-  ) => {
-    ctx.save()
-    ctx.translate(canvas.width / 2, canvas.height / 2)
-    ctx.rotate((10 * Math.PI) / 180)
-    ctx.drawImage(canvasB, -canvasB.width / 2, -canvasB.height / 2)
-    ctx.restore()
-  }, [])
-
-  // 初始化畫布尺寸
-  const initializeCanvases = useCallback((
-    canvas: HTMLCanvasElement,
-    canvasB: HTMLCanvasElement,
-    photos: string[]
-  ) => {
-    // 設置主畫布大小
-    canvas.width = 1080
-    canvas.height = 1920
-
-    // 計算照片大小和間距
-    const photoWidth = Math.floor(canvas.width * 0.35)
-    const photoHeight = photoWidth
-    const gap = Math.floor(canvas.height * 0.03)
-
-    // 設置次要畫布大小
-    canvasB.width = photoWidth
-    canvasB.height = (photoHeight + gap) * photos.length - gap
-
-    return { photoWidth, photoHeight, gap }
-  }, [])
-
-  // 合併照片主函數
   const mergePhotos = useCallback(() => {
     if (!mergeCanvasRef.current || photos.length === 0) return
 
-    const canvas = mergeCanvasRef.current
-    const ctx = canvas.getContext("2d")
-    if (!ctx) return
+    const canvasA = mergeCanvasRef.current
+    const ctxA = canvasA.getContext("2d")
+    if (!ctxA) return
 
-    // 創建第二個畫布
     const canvasB = document.createElement("canvas")
     const ctxB = canvasB.getContext("2d")
     if (!ctxB) return
 
-    // 初始化畫布
-    const { photoWidth, photoHeight, gap } = initializeCanvases(canvas, canvasB, photos)
-
-    // 創建背景
-    createMainCanvasBackground(ctx, canvas)
+    initializeCanvases(canvasA, canvasB, photos.length)
+    createMainCanvasBackground(ctxA, canvasA)
     createSecondaryCanvasBackground(ctxB, canvasB)
 
-    // 使用 Promise.all 等待所有照片加載完成
     const loadPromises = photos.map((photo, index) => {
       return new Promise<void>((resolve) => {
         const img = new Image()
         img.onload = () => {
-          drawSinglePhoto(ctxB, img, index, photoWidth, photoHeight, gap, selectedFilter)
+          drawSinglePhoto(ctxB, img, index, PHOTO_WIDTH, PHOTO_HEIGHT, PHOTO_GAP, selectedFilter)
           resolve()
         }
         img.src = photo
       })
     })
 
-    // 等待所有照片加載完成後進行合併
     Promise.all(loadPromises).then(() => {
-      mergeFinalCanvas(ctx, canvas, canvasB)
-      setMergedPhoto(canvas.toDataURL("image/jpeg", 0.9))
+      mergeFinalCanvas(ctxA, canvasA, canvasB)
+      setMergedPhoto(canvasA.toDataURL("image/jpeg", 0.9))
     })
-  }, [photos, selectedFilter, createMainCanvasBackground, createSecondaryCanvasBackground, drawSinglePhoto, mergeFinalCanvas, initializeCanvases])
+  }, [photos, selectedFilter])
 
-  // 下載照片
+  // 下載功能
   const downloadPhoto = useCallback(() => {
     if (!mergedPhoto) return
-
     const link = document.createElement("a")
     link.href = mergedPhoto
     link.download = "kawaii-photo-booth.jpg"
@@ -201,11 +81,12 @@ export function DecorateTab({ photos, onBack }: DecorateTabProps) {
     document.body.removeChild(link)
   }, [mergedPhoto])
 
-  // 當照片或濾鏡改變時重新合併
+  // 效果處理
   useEffect(() => {
     mergePhotos()
   }, [photos, selectedFilter, mergePhotos])
 
+  // 渲染UI
   return (
     <TabsContent value="decorate" className="p-6 bg-zinc-900">
       <div className="max-w-4xl mx-auto">
